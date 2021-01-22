@@ -44,16 +44,16 @@ option_prod() {
   load_env
 }
 
-# Command Usage: run
-# Command Description: Gradle project bootRun
-command_run() {
-  echo "run..."
+# Command Usage: init
+# Command Description: Init go mode to manage dependence
+command_init() {
+  go mod init github.com/sunwei/gitaction
 }
 
-# Command Usage: test <unit|function|integration>
-# Command Description: Run unit|function|integration test
+# Command Usage: test
+# Command Description: Run unit test
 command_test() {
-  echo "test..."
+  go test -v ./...
 }
 
 # Command Usage: up
@@ -113,7 +113,7 @@ main() {
         option_prod
         ;;
 
-      run|test|clean|up|build|deploy|down|console|push)
+      init|test|clean|up|build|deploy|down|console|push)
         set_command "${1}"
         ;;
 
@@ -128,7 +128,7 @@ main() {
   [[ ! -z "${theCommand}" ]] || exit_err "Command not found!"
 
   case "${theCommand}" in
-    run) command_run;;
+    run) command_init;;
     test) command_test;;
     clean) command_clean;;
     up) command_up;;
