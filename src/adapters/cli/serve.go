@@ -12,6 +12,7 @@ func init() {
 	}
 }
 
-func runServe(args docopt.Opts) {
+func runServe(opts docopt.Opts) {
+	fmt.Printf("%+v\n", opts["--port"])
 	fmt.Println("hello world")
 }
