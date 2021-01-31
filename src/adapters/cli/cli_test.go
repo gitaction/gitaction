@@ -6,27 +6,28 @@ import (
 )
 
 var input = "input"
-var usage = "Usage: echo <input>"
-
 func testFunc(opts docopt.Opts) {
 	userInput, _ := opts.String("<input>")
 	input = userInput
 }
 
 func TestRegister(t *testing.T) {
-	_ = Register("echo", testFunc, usage)
+	_ = Register("testR", testFunc)
 	
-	if found :=findCmd("echo"); found == false {
-		t.Errorf("findCmd('echo') = false, want true")
+	if found :=findCmd("testR"); found == false {
+		t.Errorf("findCmd('testR') = false, want true")
 	}
 
-	if found :=findCmd("echo2"); found == true {
-		t.Errorf("findCmd('echo2') = false, want true")
+	if found :=findCmd("testR2"); found == true {
+		t.Errorf("findCmd('testR2') = false, want true")
 	}
 }
 
 func TestRun(t *testing.T) {
-	if _ = Run("echo", []string{"hello"}); input != "hello" {
-		t.Errorf("Run('echo', []string{'hello'}) wrong, want echo hello")
+	_ = Register("testRun", testFunc)
+	opts, _ := docopt.ParseArgs("Usage: example testRun <input>", []string{"testRun", "hello"}, "0.0.1")
+	
+	if _ = Run(opts); input != "hello" {
+		t.Errorf("Run('testRun', []string{'hello'}) wrong, want echo hello")
 	}
 }

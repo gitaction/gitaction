@@ -2,43 +2,55 @@ package cli
 
 import (
 	"errors"
-	"strings"
-	"unicode"
-
 	"github.com/gitaction/docopt.go"
 )
 
-type command struct {
-	usage string
-	f     func(docopt.Opts)
-}
+var commands = make(map[string]func(docopt.Opts))
 
-var commands = make(map[string]*command)
-
-func Register(name string, f func(opts docopt.Opts), usage string) error {
-	if findCmd(name) {
-		return errors.New("duplicate command")
-	}
-	commands[name] = &command{
-		usage: strings.TrimLeftFunc(usage, unicode.IsSpace),
-		f:     f,
-	}
-	return nil
-}
-
-func Run(name string, args []string) error {
-	if !findCmd(name) {
-		return errors.New("invalid command")
-	}
-
-	cmd := commands[name]
-	parsedArgs, err := docopt.ParseArgs(cmd.usage, args, "0.0.1")
+func Process() error {
+	usage := `Usage:
+  gan serve [--port=<port>]
+  gan --help | --version`
+	
+	opts, err := docopt.ParseArgs(usage, nil, "0.0.1rc")
 	if err != nil {
 		return err
 	}
-
-	cmd.f(parsedArgs)
+	if err := Run(opts); err != nil {
+		return err
+	}
 	return nil
+}
+
+func Register(name string, f func(opts docopt.Opts)) error {
+	if findCmd(name) {
+		return errors.New("duplicate command")
+	}
+	commands[name] = f
+	return nil
+}
+
+func Run(opts docopt.Opts) error {
+	commandNames := getCommandName()
+	for _, name := range commandNames {
+		if opts[name] == true {
+			if !findCmd(name) {
+				return errors.New("invalid command")
+			}
+			f := commands[name]
+			f(opts)
+			break
+		}
+	}
+	return nil
+}
+
+func getCommandName() []string {
+	var commandNames []string
+	for name := range commands {
+		commandNames = append(commandNames, name)
+	}
+	return commandNames
 }
 
 func findCmd(name string) bool {
