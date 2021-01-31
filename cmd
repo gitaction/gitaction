@@ -56,13 +56,10 @@ command_test() {
   go test -v ./...
 }
 
-# Command Usage: up
-# Command Description: Docker compose start up brand new database container
-command_up() {
-  docker-compose -f ./docker-compose.yml up -d
-  check_msg "Docker container up"
-  echo "Database provision..."
-  ./mssql-provision/up.sh
+# Command Usage: build
+# Command Description: Build ga command line
+command_build() {
+  go build -o ./build/gan ./src/gan_app.go
 }
 
 # Command Usage: down
@@ -81,10 +78,6 @@ command_push() {
 # Command Description: Deploy application
 function command_deploy() {
   echo ">>> deploy $APP_NAME <<<"
-}
-
-command_build() {
-  echo "build..."
 }
 
 check_msg() {
@@ -113,7 +106,7 @@ main() {
         option_prod
         ;;
 
-      init|test|clean|up|build|deploy|down|console|push)
+      init|test|build|deploy|down|console|push)
         set_command "${1}"
         ;;
 
@@ -130,9 +123,9 @@ main() {
   case "${theCommand}" in
     run) command_init;;
     test) command_test;;
+    build) command_build;;
     clean) command_clean;;
     up) command_up;;
-    build) command_build;;
     deploy) command_deploy;;
     down) command_down;;
     console) command_console;;
