@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"github.com/gitaction/docopt.go"
+	"github.com/sunwei/gitaction/src/adapters/inbound"
 )
 
 func init() {
@@ -15,4 +16,5 @@ func init() {
 func runServe(opts docopt.Opts) {
 	fmt.Printf("%+v\n", opts["--port"])
 	fmt.Println("hello world")
+	inbound.Run()
 }
