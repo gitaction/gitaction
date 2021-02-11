@@ -41,8 +41,16 @@ func (r *Repo) runRpc(rpc string) ([]byte, error) {
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("RECEIVE_APP=%s", "test123"),
 	)
+	output, err := cmd.Output() 
+	if err != nil {
+		return nil, err
+	}
+	//todo: get stdin ready
+	//if err := cmd.Wait(); err != nil {
+	//	return nil, err
+	//}
 	
-	return cmd.Output()
+	return output, nil
 }
 
 func (r *Repo) provisionRepo() error {
@@ -59,6 +67,7 @@ func (r *Repo) provisionRepo() error {
 
 func (r *Repo) setRepoDir() error {
 	path, err := r.getTmpDir()
+	fmt.Printf("???? - %s\n", path)
 	if err != nil {
 		return err
 	}
@@ -87,6 +96,7 @@ func (r *Repo) getRepoPath() (path string, err error) {
 	return r.getTmpDir()
 }
 
+// TODO: remove tmp dir
 func (r *Repo) getTmpDir() (path string, err error) {
 	return ioutil.TempDir("", "gan-repo-"+r.name)
 }
@@ -104,5 +114,5 @@ func (r *Repo) disableGCAutoDetach() error {
 }
 
 func (r *Repo) writePreReceiveHook() error {
-	return ioutil.WriteFile(filepath.Join(r.path, ".git", "pre-receive"), preReceiveHook, 0755)
+	return ioutil.WriteFile(filepath.Join(r.path, ".git/hooks", "pre-receive"), preReceiveHook, 0755)
 }

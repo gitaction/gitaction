@@ -5,18 +5,24 @@ import (
 )
 
 type GitSmart struct {
-	name string
+	repoName   string
+	rpcName    string
+	repository gitrepo.RepoRepository
 }
 
 type GitSmartTransferProtocol interface {
- GetRefsInfo(name string) (info int64, err error)
-} 
-
-func NewGitSmartUseCase(repoName string) GitSmartTransferProtocol {
-	return &GitSmart{repoName }
+	GetRefsInfo() ([]byte, error)
 }
 
-func (usecase *GitSmart) GetRefsInfo(name string) (info int64, err error) {
-	repo := gitrepo.NewRepo(name)
-	
+func NewGitSmartUseCase(repoName string, rpcName string, repository gitrepo.RepoRepository) GitSmartTransferProtocol {
+	return &GitSmart{
+		repoName:   repoName,
+		rpcName:    rpcName,
+		repository: repository,
+	}
+}
+
+func (usecase *GitSmart) GetRefsInfo() ([]byte, error) {
+	repo := gitrepo.NewRepo(usecase.repoName, usecase.repository)
+	return repo.GetRefsInfo(usecase.rpcName)
 }
