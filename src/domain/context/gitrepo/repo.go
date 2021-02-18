@@ -2,6 +2,7 @@ package gitrepo
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,47 +11,77 @@ import (
 	"syscall"
 )
 
+type RepoIO interface {
+	GetReferenceUpdatesReader() io.Reader
+	GetChunkWriter() io.Writer
+}
+
 type Repo struct {
 	name       string
 	path       string
+	io         RepoIO
 	repository RepoRepository
 }
 
-func NewRepo(repoName string, repository RepoRepository) *Repo {
-	return &Repo{name: repoName, repository: repository}
+func NewRepo(repoName string, repoIO RepoIO, repository RepoRepository) *Repo {
+	return &Repo{name: repoName, io: repoIO, repository: repository}
 }
 
 func (r *Repo) SameIdentityAs(e Repo) bool {
 	return r.name == e.name
 }
 
-func (r *Repo) GetRefsInfo(rpc string) ([]byte, error) {
+func (r *Repo) GetRefsInfo(rpc string) error {
 	if err := r.setRepoDir(); err != nil {
-		return nil, err
+		return err
 	}
 	if err := r.provisionRepo(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return r.runRpc(rpc)
+	return r.runRpc(rpc, "--stateless-rpc", "--advertise-refs")
 }
 
-func (r *Repo) runRpc(rpc string) ([]byte, error) {
-	cmd := exec.Command("git", strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", "--advertise-refs", r.path)
+func (r *Repo) ReceivePack(rpc string) error {
+	if err := r.setRepoDir(); err != nil {
+		return err
+	}
+	if err := r.provisionRepo(); err != nil {
+		return err
+	}
+
+	return r.runRpc(rpc, "--stateless-rpc")
+}
+
+func (r *Repo) runRpc(rpc string, arg ...string) error {
+	cmd := exec.Command("git", strings.TrimPrefix(rpc, "git-"), strings.Join(arg, ","), r.path)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("RECEIVE_APP=%s", "test123"),
 	)
-	output, err := cmd.Output() 
-	if err != nil {
-		return nil, err
+	reader, _ := cmd.StdoutPipe()
+	if err := cmd.Start(); err != nil {
+		return err
 	}
-	//todo: get stdin ready
-	//if err := cmd.Wait(); err != nil {
-	//	return nil, err
-	//}
-	
-	return output, nil
+	if rur := r.io.GetReferenceUpdatesReader(); rur != nil {
+		writer, err := cmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(writer, rur); err != nil {
+			return err
+		}
+	}
+	if cw := r.io.GetChunkWriter(); cw != nil {
+		if _, err := io.Copy(cw, reader); err != nil {
+			return err
+		}
+	}
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *Repo) provisionRepo() error {

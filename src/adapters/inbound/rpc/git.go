@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"compress/gzip"
 	"fmt"
 	"github.com/gitaction/martini"
 	"github.com/sunwei/gitaction/src/adapters/outbound/persistece"
@@ -14,7 +15,7 @@ import (
 const SendPackRequestService = "git-receive-pack"
 const FetchPackRequestService = "git-upload-pack"
 const SendPackInfoPath = "/info/refs"
-const ReceivePackPath = "/git-upload-pack"
+const ReceivePackPath = "/git-receive-pack"
 
 func NewGitRouter() martini.Router {
 	r := martini.NewRouter()
@@ -23,8 +24,55 @@ func NewGitRouter() martini.Router {
 	return r
 }
 
+func newWriteFlusher(w http.ResponseWriter) io.Writer {
+	return writeFlusher{w.(interface {
+		io.Writer
+		http.Flusher
+	})}
+}
+
+type writeFlusher struct {
+	wf interface {
+		io.Writer
+		http.Flusher
+	}
+}
+
+func (w writeFlusher) Write(p []byte) (int, error) {
+	defer w.wf.Flush()
+	return w.wf.Write(p)
+}
+
 func ReceivePack(res http.ResponseWriter, req *http.Request)  {
-	
+	body, err := getBody(req)
+	if err != nil {
+		http.Error(res, "receive pack read body error", 500)
+		return
+	}
+
+	repoName := getRepoName(req.URL, ReceivePackPath)
+	repository := persistece.NewRepoRepositoryImpl()
+	setResponse(res, fmt.Sprintf("application/x-%s-result", SendPackRequestService))
+	usecase := gitserver.NewGitSmartUseCase(repoName, SendPackRequestService, repository)
+	err = usecase.ReceivePack(body, newWriteFlusher(res))
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+	}
+}
+
+func getBody(req *http.Request) (io.Reader, error) {
+	body := req.Body
+	var err error
+	if req.Header.Get("Content-Encoding") == "gzip" {
+		body, err = gzip.NewReader(req.Body)
+	}
+	return body, err
+}
+
+func setResponse(res http.ResponseWriter, ct string)  {
+	res.Header().Add("Content-Type", ct)
+	res.Header().Add("Cache-Control", "no-cache")
+	res.WriteHeader(200)
 }
 
 func InfoRefs(res http.ResponseWriter, req *http.Request)  {
@@ -36,25 +84,21 @@ func InfoRefs(res http.ResponseWriter, req *http.Request)  {
 	repoName := getRepoName(req.URL, SendPackInfoPath)
 	repository := persistece.NewRepoRepositoryImpl()
 
-	res.Header().Add("Content-Type", fmt.Sprintf("application/x-%s-advertisement", serviceName))
-	res.Header().Add("Cache-Control", "no-cache")
-	res.WriteHeader(200)
+	setResponse(res, fmt.Sprintf("application/x-%s-advertisement", serviceName))
 
 	if err := pktLine(res, fmt.Sprintf("# service=%s\n", serviceName)); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 	
 	usecase := gitserver.NewGitSmartUseCase(repoName, serviceName, repository)
-	chunksInfo, err := usecase.GetRefsInfo()
-	fmt.Printf("%s\n", chunksInfo)
-	_, _ = res.Write(chunksInfo)
+	err := usecase.GetRefsInfo(res)
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 
-	//if err := pktFlush(res); err != nil {
-	//	fmt.Printf("%+v\n", err)
-	//}
+	if err := pktFlush(res); err != nil {
+		fmt.Printf("%+v\n", err)
+	}
 }
 
 func getRepoName(url *url.URL, path string) string {
@@ -77,7 +121,7 @@ func pktLine(w io.Writer, s string) error {
 }
 
 //TODO: check is this necessary, MacOS & Linux - ubuntu
-//func pktFlush(w io.Writer) error {
-//	_, err := fmt.Fprint(w, "0000")
-//	return err
-//}
+func pktFlush(w io.Writer) error {
+	_, err := fmt.Fprint(w, "0000")
+	return err
+}
