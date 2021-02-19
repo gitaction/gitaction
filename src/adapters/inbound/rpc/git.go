@@ -19,8 +19,8 @@ const ReceivePackPath = "/git-receive-pack"
 
 func NewGitRouter() martini.Router {
 	r := martini.NewRouter()
-	r.Get(SendPackInfoPath, InfoRefs)
-	r.Post(ReceivePackPath, ReceivePack)
+	r.Get("/([a-zA-Z]+).git" + SendPackInfoPath, InfoRefs)
+	r.Post("/([a-zA-Z]+).git" +ReceivePackPath, ReceivePack)
 	return r
 }
 

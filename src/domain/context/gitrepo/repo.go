@@ -39,7 +39,7 @@ func (r *Repo) GetRefsInfo(rpc string) error {
 		return err
 	}
 
-	return r.runRpc(rpc, "--stateless-rpc", "--advertise-refs")
+	return r.runRpc(strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", "--advertise-refs", r.path)
 }
 
 func (r *Repo) ReceivePack(rpc string) error {
@@ -50,24 +50,29 @@ func (r *Repo) ReceivePack(rpc string) error {
 		return err
 	}
 
-	return r.runRpc(rpc, "--stateless-rpc")
+	return r.runRpc(strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", r.path)
 }
 
-func (r *Repo) runRpc(rpc string, arg ...string) error {
-	cmd := exec.Command("git", strings.TrimPrefix(rpc, "git-"), strings.Join(arg, ","), r.path)
+func (r *Repo) runRpc(arg ...string) error {
+	cmd := exec.Command("git", arg...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("RECEIVE_APP=%s", "test123"),
+		fmt.Sprintf("RECEIVE_APP=%s", "example"),
 	)
 	reader, _ := cmd.StdoutPipe()
+	
+	var writer io.WriteCloser
+	if rur := r.io.GetReferenceUpdatesReader(); rur != nil {
+		var err error 
+		writer, err = cmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	if rur := r.io.GetReferenceUpdatesReader(); rur != nil {
-		writer, err := cmd.StdinPipe()
-		if err != nil {
-			return err
-		}
 		if _, err := io.Copy(writer, rur); err != nil {
 			return err
 		}
@@ -96,6 +101,7 @@ func (r *Repo) provisionRepo() error {
 	return nil
 }
 
+//todo: remove
 func (r *Repo) setRepoDir() error {
 	path, err := r.getTmpDir()
 	fmt.Printf("???? - %s\n", path)
