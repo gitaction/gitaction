@@ -47,7 +47,7 @@ option_prod() {
 # Command Usage: init
 # Command Description: Init go mode to manage dependence
 command_init() {
-  go mod init github.com/sunwei/gitaction
+  go mod init github.com/gitaction
 }
 
 # Command Usage: test

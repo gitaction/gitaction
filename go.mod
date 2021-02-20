@@ -1,4 +1,4 @@
-module github.com/sunwei/gitaction
+module github.com/gitaction
 
 go 1.14
 

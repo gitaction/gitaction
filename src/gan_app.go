@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/sunwei/gitaction/src/adapters/cli"
+	"github.com/gitaction/src/adapters/cli"
 )
 
 func main() {

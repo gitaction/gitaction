@@ -1,7 +1,7 @@
 package gitserver
 
 import (
-	"github.com/sunwei/gitaction/src/domain/context/gitrepo"
+	"github.com/gitaction/src/domain/context/gitrepo"
 	"io"
 )
 

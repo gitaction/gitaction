@@ -2,7 +2,7 @@ package inbound
 
 import (
 	"github.com/gitaction/martini"
-	"github.com/sunwei/gitaction/src/adapters/inbound/rpc"
+	"github.com/gitaction/src/adapters/inbound/rpc"
 )
 
 var m = martini.Classic()

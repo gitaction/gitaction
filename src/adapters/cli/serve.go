@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 	"github.com/gitaction/docopt.go"
-	"github.com/sunwei/gitaction/src/adapters/inbound"
+	"github.com/gitaction/src/adapters/inbound"
 )
 
 func init() {

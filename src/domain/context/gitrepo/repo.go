@@ -39,7 +39,11 @@ func (r *Repo) GetRefsInfo(rpc string) error {
 		return err
 	}
 
-	return r.runRpc(strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", "--advertise-refs", r.path)
+	if err := r.runRpc(strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", "--advertise-refs", r.path); err != nil {
+		return err
+	}
+	
+	return os.RemoveAll(r.path)
 }
 
 func (r *Repo) ReceivePack(rpc string) error {
@@ -50,7 +54,11 @@ func (r *Repo) ReceivePack(rpc string) error {
 		return err
 	}
 
-	return r.runRpc(strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", r.path)
+	if err := r.runRpc(strings.TrimPrefix(rpc, "git-"), "--stateless-rpc", r.path); err != nil {
+		return err
+	}
+	
+	return os.RemoveAll(r.path)
 }
 
 func (r *Repo) runRpc(arg ...string) error {
